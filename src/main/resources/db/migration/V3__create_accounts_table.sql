@@ -1,0 +1,5 @@
+CREATE TABLE accounts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    account_number VARCHAR(20) NOT NULL UNIQUE,
+    owner_name VARCHAR(100) NOT NULL
+);
