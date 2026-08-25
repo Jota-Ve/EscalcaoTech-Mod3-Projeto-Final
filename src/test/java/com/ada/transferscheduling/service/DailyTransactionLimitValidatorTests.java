@@ -3,6 +3,7 @@ package com.ada.transferscheduling.service;
 import com.ada.transferscheduling.exception.AccountNotFoundException;
 import com.ada.transferscheduling.exception.InvalidTransferException;
 import com.ada.transferscheduling.repository.AccountRepository;
+import com.ada.transferscheduling.validation.DailyTransactionLimitValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -12,9 +13,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class DailyTransactionLimitValidatorTests {
 
