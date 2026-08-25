@@ -11,6 +11,7 @@ import com.ada.transferscheduling.mapper.TransferMapper;
 import com.ada.transferscheduling.repository.AccountRepository;
 import com.ada.transferscheduling.repository.TransferRepository;
 import com.ada.transferscheduling.service.TransferFeeCalculator;
+import com.ada.transferscheduling.service.DailyTransactionLimitValidator;
 import com.ada.transferscheduling.service.TransferService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,11 +29,16 @@ public class TransferServiceImpl implements TransferService {
     private final AccountRepository accountRepository;
     private final TransferMapper transferMapper;
     private final TransferFeeCalculator transferFeeCalculator;
+    private final DailyTransactionLimitValidator dailyTransactionLimitValidator;
 
     @Override
     @Transactional
     public TransferResponse schedule(ScheduleTransferRequest request) {
         validateAccountsExist(request.getSourceAccount(), request.getDestinationAccount());
+        dailyTransactionLimitValidator.validate(
+                request.getSourceAccount(),
+                List.of(request.getAmount()),
+                request.getTransferDate().toLocalDate());
 
         LocalDateTime scheduledDate = LocalDateTime.now();
         BigDecimal fee = transferFeeCalculator.calculate(request.getAmount(), scheduledDate, request.getTransferDate());

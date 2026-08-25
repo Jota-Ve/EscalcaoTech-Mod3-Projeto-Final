@@ -1,4 +1,4 @@
-package com.ada.transferscheduling.validation;
+package com.ada.transferscheduling.service;
 
 import com.ada.transferscheduling.exception.AccountNotFoundException;
 import com.ada.transferscheduling.exception.InvalidTransferException;
