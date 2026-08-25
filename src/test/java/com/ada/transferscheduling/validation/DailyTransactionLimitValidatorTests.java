@@ -1,9 +1,8 @@
-package com.ada.transferscheduling.service;
+package com.ada.transferscheduling.validation;
 
 import com.ada.transferscheduling.exception.AccountNotFoundException;
 import com.ada.transferscheduling.exception.InvalidTransferException;
 import com.ada.transferscheduling.repository.AccountRepository;
-import com.ada.transferscheduling.validation.DailyTransactionLimitValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
