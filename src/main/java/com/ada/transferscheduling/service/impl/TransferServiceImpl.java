@@ -72,13 +72,13 @@ public class TransferServiceImpl implements TransferService {
 
         if (transfer.getStatus() != TransferStatus.SCHEDULED) {
             throw new InvalidTransferException(
-                    "Only transfers with status SCHEDULED can be cancelled, current status is "
+                    "Somente transferências com status SCHEDULED podem ser canceladas, status atual é "
                             + transfer.getStatus());
         }
 
         if (!LocalDateTime.now().isBefore(transfer.getTransferDate())) {
             throw new InvalidTransferException(
-                    "Transfer can no longer be cancelled because the transfer date has already arrived");
+                    "A transferência não pode mais ser cancelada porque a data da transferência já chegou");
         }
 
         transfer.setStatus(TransferStatus.CANCELLED);
