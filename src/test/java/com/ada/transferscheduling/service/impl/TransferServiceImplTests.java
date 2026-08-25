@@ -5,6 +5,7 @@ import com.ada.transferscheduling.dto.response.TransferResponse;
 import com.ada.transferscheduling.entity.Transfer;
 import com.ada.transferscheduling.entity.TransferStatus;
 import com.ada.transferscheduling.exception.AccountNotFoundException;
+import com.ada.transferscheduling.exception.InvalidTransferException;
 import com.ada.transferscheduling.exception.TransferNotFoundException;
 import com.ada.transferscheduling.mapper.TransferMapper;
 import com.ada.transferscheduling.repository.AccountRepository;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -100,7 +102,7 @@ class TransferServiceImplTests {
 
     @Test
     void scheduleShouldPersistAndReturnResponse() {
-        // arrange
+        // preparação
         when(accountRepository.existsByAccountNumber(request.getSourceAccount())).thenReturn(true);
         when(accountRepository.existsByAccountNumber(request.getDestinationAccount())).thenReturn(true);
         when(transferFeeCalculator.calculate(eq(request.getAmount()), any(LocalDateTime.class), eq(request.getTransferDate())))
@@ -109,10 +111,10 @@ class TransferServiceImplTests {
         when(transferRepository.save(any(Transfer.class))).thenReturn(savedTransfer);
         when(transferMapper.toResponse(savedTransfer)).thenReturn(response);
 
-        // act
+        // ação
         TransferResponse result = transferService.schedule(request);
 
-        // assert
+        // verificação
         assertSame(response, result);
         verify(accountRepository).existsByAccountNumber(request.getSourceAccount());
         verify(accountRepository).existsByAccountNumber(request.getDestinationAccount());
@@ -124,29 +126,62 @@ class TransferServiceImplTests {
 
     @Test
     void scheduleShouldFailWhenSourceAccountDoesNotExist() {
-        // arrange
+        // preparação
         when(accountRepository.existsByAccountNumber(request.getSourceAccount())).thenReturn(false);
 
         // act
         AccountNotFoundException exception = assertThrows(AccountNotFoundException.class, () -> transferService.schedule(request));
 
         // assert
-        assertEquals("Account not found for account number: " + request.getSourceAccount(), exception.getMessage());
+        assertEquals("Conta não encontrada para o número da conta: " + request.getSourceAccount(), exception.getMessage());
         verify(accountRepository).existsByAccountNumber(request.getSourceAccount());
         verify(accountRepository, never()).existsByAccountNumber(request.getDestinationAccount());
         verifyNoInteractions(transferFeeCalculator, transferMapper, transferRepository);
     }
 
     @Test
+    void scheduleShouldFailWhenDestinationAccountDoesNotExist() {
+        // preparação
+        when(accountRepository.existsByAccountNumber(request.getSourceAccount())).thenReturn(true);
+        when(accountRepository.existsByAccountNumber(request.getDestinationAccount())).thenReturn(false);
+
+        // act
+        AccountNotFoundException exception = assertThrows(AccountNotFoundException.class, () -> transferService.schedule(request));
+
+        // assert
+        assertEquals("Conta não encontrada para o número da conta: " + request.getDestinationAccount(), exception.getMessage());
+        verify(accountRepository).existsByAccountNumber(request.getSourceAccount());
+        verify(accountRepository).existsByAccountNumber(request.getDestinationAccount());
+        verifyNoInteractions(transferFeeCalculator, transferMapper, transferRepository);
+    }
+
+    @Test
+    void findAllShouldReturnMappedTransfers() {
+        // preparação
+        List<Transfer> transfers = List.of(savedTransfer, savedTransfer);
+        List<TransferResponse> expected = List.of(response, response);
+        when(transferRepository.findAll()).thenReturn(transfers);
+        when(transferMapper.toResponseList(transfers)).thenReturn(expected);
+
+        // ação
+        List<TransferResponse> result = transferService.findAll();
+
+        // verificação
+        assertEquals(expected, result);
+        verify(transferRepository).findAll();
+        verify(transferMapper).toResponseList(transfers);
+    }
+
+    @Test
     void findByIdShouldReturnMappedTransfer() {
-        // arrange
+        // preparação
         when(transferRepository.findById(10L)).thenReturn(Optional.of(savedTransfer));
         when(transferMapper.toResponse(savedTransfer)).thenReturn(response);
 
-        // act
+        // ação
         TransferResponse result = transferService.findById(10L);
 
-        // assert
+        // verificação
         assertSame(response, result);
         verify(transferRepository).findById(10L);
         verify(transferMapper).toResponse(savedTransfer);
@@ -154,28 +189,108 @@ class TransferServiceImplTests {
 
     @Test
     void findByIdShouldFailWhenTransferDoesNotExist() {
-        // arrange
+        // preparação
         when(transferRepository.findById(10L)).thenReturn(Optional.empty());
 
-        // act
+        // ação
         TransferNotFoundException exception = assertThrows(TransferNotFoundException.class, () -> transferService.findById(10L));
 
-        // assert
-        assertEquals("Transfer not found for id: 10", exception.getMessage());
+        // verificação
+        assertEquals("Transferência não encontrada para o id: 10", exception.getMessage());
         verify(transferRepository).findById(10L);
         verifyNoInteractions(transferMapper);
     }
 
     @Test
-    void cancelShouldFailWhenTransferDoesNotExist() {
-        // arrange
-        when(transferRepository.findById(20L)).thenReturn(Optional.empty());
+    void cancelShouldChangeStatusToCancelledWhenTransferIsScheduledAndFuture() {
+        // preparação
+        Transfer scheduledTransfer = Transfer.builder()
+                .id(15L)
+                .sourceAccount(request.getSourceAccount())
+                .destinationAccount(request.getDestinationAccount())
+                .amount(request.getAmount())
+                .transferDate(LocalDateTime.now().plusDays(1))
+                .status(TransferStatus.SCHEDULED)
+                .build();
+
+        TransferResponse cancelledResponse = TransferResponse.builder()
+                .id(15L)
+                .sourceAccount(request.getSourceAccount())
+                .destinationAccount(request.getDestinationAccount())
+                .amount(request.getAmount())
+                .transferDate(scheduledTransfer.getTransferDate())
+                .status(TransferStatus.CANCELLED)
+                .build();
+
+        when(transferRepository.findById(15L)).thenReturn(Optional.of(scheduledTransfer));
+        when(transferRepository.save(scheduledTransfer)).thenReturn(scheduledTransfer);
+        when(transferMapper.toResponse(scheduledTransfer)).thenReturn(cancelledResponse);
+
+        // ação
+        TransferResponse result = transferService.cancel(15L);
+
+        // verificação
+        assertEquals(TransferStatus.CANCELLED, result.getStatus());
+        assertEquals(TransferStatus.CANCELLED, scheduledTransfer.getStatus());
+        verify(transferRepository).findById(15L);
+        verify(transferRepository).save(scheduledTransfer);
+        verify(transferMapper).toResponse(scheduledTransfer);
+    }
+
+    @Test
+    void cancelShouldFailWhenTransferStatusIsNotScheduled() {
+        // preparação
+        Transfer completedTransfer = Transfer.builder()
+                .id(15L)
+                .sourceAccount(request.getSourceAccount())
+                .destinationAccount(request.getDestinationAccount())
+                .amount(request.getAmount())
+                .transferDate(LocalDateTime.now().plusDays(1))
+                .status(TransferStatus.COMPLETED)
+                .build();
+        when(transferRepository.findById(15L)).thenReturn(Optional.of(completedTransfer));
 
         // act
-        TransferNotFoundException exception = assertThrows(TransferNotFoundException.class, () -> transferService.cancel(20L));
+        InvalidTransferException exception = assertThrows(InvalidTransferException.class, () -> transferService.cancel(15L));
 
         // assert
-        assertEquals("Transfer not found for id: 20", exception.getMessage());
+        assertEquals("Somente transferências com status SCHEDULED podem ser canceladas, status atual é COMPLETED", exception.getMessage());
+        verify(transferRepository).findById(15L);
+        verify(transferRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelShouldFailWhenTransferDateIsAlreadyReached() {
+        // preparação
+        Transfer scheduledTransfer = Transfer.builder()
+                .id(15L)
+                .sourceAccount(request.getSourceAccount())
+                .destinationAccount(request.getDestinationAccount())
+                .amount(request.getAmount())
+                .transferDate(LocalDateTime.now().minusMinutes(1))
+                .status(TransferStatus.SCHEDULED)
+                .build();
+        when(transferRepository.findById(15L)).thenReturn(Optional.of(scheduledTransfer));
+
+        // act
+        InvalidTransferException exception = assertThrows(InvalidTransferException.class, () -> transferService.cancel(15L));
+
+        // assert
+        assertEquals("A transferência não pode mais ser cancelada porque a data da transferência já chegou", exception.getMessage());
+        verify(transferRepository).findById(15L);
+        verify(transferRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelShouldFailWhenTransferDoesNotExist() {
+        // preparação
+        when(transferRepository.findById(20L)).thenReturn(Optional.empty());
+
+        // ação
+        TransferNotFoundException exception = assertThrows(TransferNotFoundException.class, () -> transferService.cancel(20L));
+
+        // verificação
+        assertEquals("Transferência não encontrada para o id: 20", exception.getMessage());
         verify(transferRepository).findById(20L);
         verify(transferRepository, never()).save(any());
         verifyNoInteractions(transferMapper);
