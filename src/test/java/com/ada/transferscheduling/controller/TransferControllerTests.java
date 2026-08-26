@@ -41,10 +41,12 @@ class TransferControllerTests {
 
     @Test
     void scheduleShouldReturnCreated() throws Exception {
+        //arrange
         TransferResponse response = buildResponse(1L);
 
         when(transferService.schedule(any())).thenReturn(response);
 
+        //act and assert
         mockMvc.perform(post(TRANSFERS_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                 .content(validScheduleRequestJson()))
@@ -57,8 +59,10 @@ class TransferControllerTests {
 
     @Test
     void findAllShouldReturnOk() throws Exception {
+        //arrange
         when(transferService.findAll()).thenReturn(List.of(buildResponse(1L), buildResponse(2L)));
-
+        
+        //act and assert
         mockMvc.perform(get(TRANSFERS_URL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1L))
@@ -69,8 +73,9 @@ class TransferControllerTests {
 
     @Test
     void findByIdShouldReturnOk() throws Exception {
+        //arrange
         when(transferService.findById(1L)).thenReturn(buildResponse(1L));
-
+        //act and assert
         mockMvc.perform(get(TRANSFER_ID_1_URL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
@@ -80,8 +85,9 @@ class TransferControllerTests {
 
     @Test
     void cancelShouldReturnOk() throws Exception {
+        //arrange
         when(transferService.cancel(1L)).thenReturn(buildResponse(1L));
-
+        //act and assert
         mockMvc.perform(patch(TRANSFER_CANCEL_ID_1_URL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
