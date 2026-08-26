@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -73,6 +74,18 @@ public class DailyTransactionLimitValidatorTests {
 
 		assertThrows(InvalidTransferException.class, () -> validator.validate(ACCOUNT_NUMBER,
 				List.of(BigDecimal.ZERO, new BigDecimal("100.00")),
+				TRANSACTION_DATE));
+	}
+
+	@Test
+	void shouldThrowExceptionWhenTransactionValueIsNullOrNegative() {
+		when(accountRepository.existsByAccountNumber(ACCOUNT_NUMBER)).thenReturn(true);
+
+		assertThrows(InvalidTransferException.class, () -> validator.validate(ACCOUNT_NUMBER,
+				Arrays.asList((BigDecimal) null),
+				TRANSACTION_DATE));
+		assertThrows(InvalidTransferException.class, () -> validator.validate(ACCOUNT_NUMBER,
+				List.of(new BigDecimal("-100.00")),
 				TRANSACTION_DATE));
 	}
 
