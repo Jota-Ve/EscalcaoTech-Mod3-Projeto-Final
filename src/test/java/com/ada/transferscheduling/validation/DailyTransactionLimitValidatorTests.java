@@ -78,14 +78,20 @@ public class DailyTransactionLimitValidatorTests {
 	}
 
 	@Test
-	void shouldThrowExceptionWhenTransactionValueIsNullOrNegative() {
+	void shouldThrowExceptionWhenTransactionValueIsNegative() {
+		when(accountRepository.existsByAccountNumber(ACCOUNT_NUMBER)).thenReturn(true);
+
+		assertThrows(InvalidTransferException.class, () -> validator.validate(ACCOUNT_NUMBER,
+				List.of(new BigDecimal("-100.00")),
+				TRANSACTION_DATE));
+	}
+	
+	@Test
+	void shouldThrowExceptionWhenTransactionValueIsNull() {
 		when(accountRepository.existsByAccountNumber(ACCOUNT_NUMBER)).thenReturn(true);
 
 		assertThrows(InvalidTransferException.class, () -> validator.validate(ACCOUNT_NUMBER,
 				Arrays.asList((BigDecimal) null),
-				TRANSACTION_DATE));
-		assertThrows(InvalidTransferException.class, () -> validator.validate(ACCOUNT_NUMBER,
-				List.of(new BigDecimal("-100.00")),
 				TRANSACTION_DATE));
 	}
 
