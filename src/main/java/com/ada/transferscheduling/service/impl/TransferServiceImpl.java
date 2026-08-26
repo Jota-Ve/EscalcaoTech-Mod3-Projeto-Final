@@ -28,11 +28,16 @@ public class TransferServiceImpl implements TransferService {
     private final AccountRepository accountRepository;
     private final TransferMapper transferMapper;
     private final TransferFeeCalculator transferFeeCalculator;
+    private final com.ada.transferscheduling.validation.DailyTransactionLimitValidator dailyTransactionLimitValidator;
 
     @Override
     @Transactional
     public TransferResponse schedule(ScheduleTransferRequest request) {
         validateAccountsExist(request.getSourceAccount(), request.getDestinationAccount());
+        dailyTransactionLimitValidator.validate(
+                request.getSourceAccount(),
+                List.of(request.getAmount()),
+                request.getTransferDate().toLocalDate());
 
         LocalDateTime scheduledDate = LocalDateTime.now();
         BigDecimal fee = transferFeeCalculator.calculate(request.getAmount(), scheduledDate, request.getTransferDate());

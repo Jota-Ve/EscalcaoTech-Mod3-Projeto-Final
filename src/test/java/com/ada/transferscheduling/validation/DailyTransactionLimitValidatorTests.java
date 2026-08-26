@@ -1,14 +1,14 @@
-package com.ada.transferscheduling.service;
+package com.ada.transferscheduling.validation;
 
 import com.ada.transferscheduling.exception.AccountNotFoundException;
 import com.ada.transferscheduling.exception.InvalidTransferException;
 import com.ada.transferscheduling.repository.AccountRepository;
-import com.ada.transferscheduling.validation.DailyTransactionLimitValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -74,6 +74,24 @@ public class DailyTransactionLimitValidatorTests {
 
 		assertThrows(InvalidTransferException.class, () -> validator.validate(ACCOUNT_NUMBER,
 				List.of(BigDecimal.ZERO, new BigDecimal("100.00")),
+				TRANSACTION_DATE));
+	}
+
+	@Test
+	void shouldThrowExceptionWhenTransactionValueIsNegative() {
+		when(accountRepository.existsByAccountNumber(ACCOUNT_NUMBER)).thenReturn(true);
+
+		assertThrows(InvalidTransferException.class, () -> validator.validate(ACCOUNT_NUMBER,
+				List.of(new BigDecimal("-100.00")),
+				TRANSACTION_DATE));
+	}
+	
+	@Test
+	void shouldThrowExceptionWhenTransactionValueIsNull() {
+		when(accountRepository.existsByAccountNumber(ACCOUNT_NUMBER)).thenReturn(true);
+
+		assertThrows(InvalidTransferException.class, () -> validator.validate(ACCOUNT_NUMBER,
+				Arrays.asList((BigDecimal) null),
 				TRANSACTION_DATE));
 	}
 
