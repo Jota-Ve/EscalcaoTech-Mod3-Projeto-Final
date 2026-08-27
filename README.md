@@ -169,3 +169,13 @@ curl -X POST http://localhost:8080/api/transfers \
 curl -X PATCH http://localhost:8080/api/transfers/{id}/cancel \
   -H "Authorization: Bearer $TOKEN"
 ```
+### Git
+```bash
+https://github.com/Jota-Ve/EscalcaoTech-Mod3-Projeto-Final.git
+```
+
+### Membros do projeto
+- João Vitor Barbosa
+- Leonardo da Conceição
+- Raphael de Freitas
+- Thaís França
